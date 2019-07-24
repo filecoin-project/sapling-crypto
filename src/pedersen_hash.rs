@@ -5,11 +5,13 @@ use jubjub::*;
 pub enum Personalization {
     NoteCommitment,
     MerkleTree(usize),
+    None,
 }
 
 impl Personalization {
     pub fn get_bits(&self) -> Vec<bool> {
         match *self {
+            Personalization::None => Vec::new(),
             Personalization::NoteCommitment => vec![true, true, true, true, true, true],
             Personalization::MerkleTree(num) => {
                 assert!(num < 63);

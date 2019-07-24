@@ -25,10 +25,12 @@ where
     CS: ConstraintSystem<E>,
 {
     let personalization = personalization.get_constant_bools();
-    assert_eq!(personalization.len(), 6);
 
     let mut edwards_result = None;
     let mut bits = personalization.iter().chain(bits.iter());
+    let k = bits.clone();
+    println!("{:?}", k.collect::<Vec<_>>().len());
+
     let mut segment_generators = params.pedersen_circuit_generators().iter();
     let boolean_false = Boolean::constant(false);
 
@@ -202,5 +204,80 @@ mod test {
                 assert!(res.get_y().get_value().unwrap() != unexpected.1);
             }
         }
+    }
+
+    #[test]
+    fn test_pedersen_hash_none_personalization() {
+        let mut rng = XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let params = &JubjubBls12::new();
+
+        for length in 1..751 {
+            for _ in 0..5 {
+                let mut input: Vec<bool> = (0..length).map(|_| rng.gen()).collect();
+
+                let mut cs = TestConstraintSystem::<Bls12>::new();
+
+                let input_bools: Vec<Boolean> = input
+                    .iter()
+                    .enumerate()
+                    .map(|(i, b)| {
+                        Boolean::from(
+                            AllocatedBit::alloc(cs.namespace(|| format!("input {}", i)), Some(*b))
+                                .unwrap(),
+                        )
+                    })
+                    .collect();
+
+                let res = pedersen_hash(
+                    cs.namespace(|| "pedersen hash"),
+                    Personalization::None,
+                    &input_bools,
+                    params,
+                )
+                .unwrap();
+
+                assert!(cs.is_satisfied());
+
+                let expected = ::pedersen_hash::pedersen_hash::<Bls12, _>(
+                    Personalization::None,
+                    input.clone().into_iter(),
+                    params,
+                )
+                .into_xy();
+
+                assert_eq!(res.get_x().get_value().unwrap(), expected.0);
+                assert_eq!(res.get_y().get_value().unwrap(), expected.1);
+            }
+        }
+    }
+
+    #[test]
+    fn test_pedersen_hash_constraints_none_personalization() {
+        let mut rng = XorShiftRng::from_seed([0x3dbe6259, 0x8d313d76, 0x3237db17, 0xe5bc0654]);
+        let params = &JubjubBls12::new();
+        let mut cs = TestConstraintSystem::<Bls12>::new();
+
+        let input: Vec<bool> = (0..(Fr::NUM_BITS * 2)).map(|_| rng.gen()).collect();
+
+        let input_bools: Vec<Boolean> = input
+            .iter()
+            .enumerate()
+            .map(|(i, b)| {
+                Boolean::from(
+                    AllocatedBit::alloc(cs.namespace(|| format!("input {}", i)), Some(*b)).unwrap(),
+                )
+            })
+            .collect();
+
+        pedersen_hash(
+            cs.namespace(|| "pedersen hash"),
+            Personalization::None,
+            &input_bools,
+            params,
+        )
+        .unwrap();
+
+        assert!(cs.is_satisfied());
+        assert_eq!(cs.num_constraints(), 1369);
     }
 }
