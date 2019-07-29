@@ -28,7 +28,6 @@ where
 
     let mut edwards_result = None;
     let mut bits = personalization.iter().chain(bits.iter());
-    let k = bits.clone();
 
     let mut segment_generators = params.pedersen_circuit_generators().iter();
     let boolean_false = Boolean::constant(false);
