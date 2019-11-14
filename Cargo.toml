@@ -15,8 +15,8 @@ rand_core = "0.5"
 rand = "0.7"
 byteorder = "1"
 ff = { version = "0.5.0", features = ["derive"] }
-paired = { version = "0.15", git = "https://github.com/filecoin-project/pairing", branch = "update-from-upstream", features = ["expose-arith"] }
-bellperson = { version = "0.3", git = "https://github.com/filecoin-project/bellman", branch = "update-from-upstream" }
+paired =  { version = "0.16.0", features = ["expose-arith"] }
+bellperson = "0.4.0"
 blake2b_simd = "0.5"
 blake2s_simd = "0.5"
 
