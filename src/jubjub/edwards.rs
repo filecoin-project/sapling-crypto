@@ -7,6 +7,7 @@ use rand_core::RngCore;
 
 use std::marker::PhantomData;
 
+use std::fmt::{self, Debug, Formatter};
 use std::io::{self, Read, Write};
 
 // Represents the affine point (X/Z, Y/Z) via the extended
@@ -67,6 +68,8 @@ impl<E: JubjubEngine, Subgroup> PartialEq for Point<E, Subgroup> {
         x1 == x2 && y1 == y2
     }
 }
+
+impl<E: JubjubEngine, Subgroup> Eq for Point<E, Subgroup> {}
 
 impl<E: JubjubEngine> Point<E, Unknown> {
     pub fn read<R: Read>(reader: R, params: &E::Params) -> io::Result<Self> {
@@ -166,6 +169,17 @@ impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
         }
 
         y_repr.write_le(writer)
+    }
+
+    /// Compresses this Edward's point into a 32 byte representation.
+    pub fn compress(&self) -> CompressedPoint<E, Subgroup> {
+        assert_eq!(E::Fr::NUM_BITS, 255);
+        let (x, y) = self.into_xy();
+        let mut compressed_repr = y.into_repr();
+        if x.into_repr().is_odd() {
+            compressed_repr.as_mut()[3] |= 0x8000000000000000u64;
+        }
+        CompressedPoint::new(compressed_repr)
     }
 
     /// Convert from a Montgomery point
@@ -471,5 +485,57 @@ impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
         }
 
         res
+    }
+}
+
+#[derive(Clone)]
+pub struct CompressedPoint<E, Subgroup>(<E::Fr as PrimeField>::Repr, PhantomData<Subgroup>)
+where
+    E: JubjubEngine;
+
+impl<E, Subgroup> Debug for CompressedPoint<E, Subgroup>
+where
+    E: JubjubEngine,
+{
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_tuple("CompressedPoint").field(&self.0).finish()
+    }
+}
+
+impl<E, Subgroup> PartialEq for CompressedPoint<E, Subgroup>
+where
+    E: JubjubEngine,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<E: JubjubEngine, Subgroup> Eq for CompressedPoint<E, Subgroup> {}
+
+impl<E, Subgroup> CompressedPoint<E, Subgroup>
+where
+    E: JubjubEngine,
+{
+    pub fn new(compressed: <E::Fr as PrimeField>::Repr) -> Self {
+        CompressedPoint(compressed, PhantomData)
+    }
+
+    pub fn as_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::<u8>::with_capacity(32);
+        self.0
+            .write_le(&mut bytes)
+            .expect("failed to write compressed point");
+        bytes
+    }
+
+    pub fn decompress(&self, params: &E::Params) -> Point<E, Subgroup> {
+        let mut compressed_repr = self.0.clone();
+        let x_sign = (compressed_repr.as_ref()[3] >> 63) == 1;
+        compressed_repr.as_mut()[3] &= 0x7fffffffffffffff;
+        let y_repr = compressed_repr;
+        let y = E::Fr::from_repr(y_repr).unwrap();
+        let point = Point::get_for_y(y, x_sign, params).unwrap();
+        convert_subgroup(&point)
     }
 }

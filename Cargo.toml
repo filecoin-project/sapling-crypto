@@ -19,6 +19,8 @@ paired =  { version = "0.16.0", features = ["expose-arith"] }
 bellperson = "0.4.0"
 blake2b_simd = "0.5"
 blake2s_simd = "0.5"
+lazy_static = "1.4.0"
+rayon = "1.2.0"
 
 [dev-dependencies]
 digest = "0.8"
