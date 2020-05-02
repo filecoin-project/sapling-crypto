@@ -15,7 +15,7 @@ rand_core = "0.5"
 rand = "0.7"
 byteorder = "1"
 fff = { version = "0.2.1", features = ["derive"] }
-paired =  { version = "0.19.0", features = ["expose-arith"] }
+paired =  { version = "0.19.1", features = ["expose-arith"] }
 bellperson = "0.7.0"
 blake2b_simd = "0.5"
 blake2s_simd = "0.5"
@@ -33,4 +33,3 @@ cc = "1.0"
 [features]
 default = []
 gpu = ["bellperson/gpu"]
-
