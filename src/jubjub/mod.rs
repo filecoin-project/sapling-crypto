@@ -27,9 +27,6 @@ use crate::constants;
 
 use paired::bls12_381::{Bls12, Fr};
 
-use std::convert::TryInto;
-use std::slice;
-
 /// This is an implementation of the twisted Edwards Jubjub curve.
 pub mod edwards;
 
@@ -328,7 +325,11 @@ impl JubjubBls12 {
         }
 
         // Create the exp table precomputations for the Pedersen hash generators
-        if cfg!(target_arch = "x86_64") {
+        #[cfg(target_arch = "x86_64")]
+        {
+            use std::convert::TryInto;
+            use std::slice;
+
             if *crate::pedersen_hash::CPU_SUPPORTS_ADX_INSTRUCTION {
                 let mut pedersen_hash_exp_precomp = vec![];
                 for g in &tmp_params.pedersen_hash_exp {

@@ -1,7 +1,3 @@
-use std::convert::TryInto;
-use std::is_x86_feature_detected;
-use std::slice;
-
 use fff::{Field, PrimeField, PrimeFieldRepr};
 use lazy_static::lazy_static;
 #[cfg(target_arch = "x86_64")]
@@ -10,7 +6,16 @@ use paired::bls12_381::Bls12;
 use crate::jubjub::*;
 
 lazy_static! {
-    pub static ref CPU_SUPPORTS_ADX_INSTRUCTION: bool = is_x86_feature_detected!("adx");
+    pub static ref CPU_SUPPORTS_ADX_INSTRUCTION: bool = {
+        #[cfg(target_arch = "x86_64")]
+        {
+            is_x86_feature_detected!("adx")
+        }
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            false
+        }
+    };
 }
 
 #[derive(Copy, Clone)]
@@ -131,6 +136,9 @@ pub fn pedersen_hash_bls12_381_with_precomp<I>(
 where
     I: IntoIterator<Item = bool>,
 {
+    use std::convert::TryInto;
+    use std::slice;
+
     // If we compiled for an x86_64 CPU, but the CPU does not support the ADX instruction, fallback
     // to using the non-optimized Pedersen hash.
     if !*CPU_SUPPORTS_ADX_INSTRUCTION {
